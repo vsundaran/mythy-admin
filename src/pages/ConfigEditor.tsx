@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
 import { Button } from '../components/ui/Button';
 import { 
   Save, 
@@ -10,48 +9,47 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { useConfig, useUpdateConfig } from '../hooks/useConfig';
 
 const ConfigEditor: React.FC = () => {
-  const [configs, setConfigs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: response, status, refetch } = useConfig();
+  const updateMutation = useUpdateConfig();
+  
+  const [localConfigs, setLocalConfigs] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const fetchConfigs = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get('/admin/configs');
-      setConfigs(response.data.data);
-    } catch (err) {
-      setError('Failed to load configurations.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Sync local state when query data changes
   useEffect(() => {
-    fetchConfigs();
-  }, []);
+    if (response?.data) {
+      setLocalConfigs(response.data);
+    }
+  }, [response]);
 
   const handleChange = (key: string, value: any) => {
-    setConfigs(prev => prev.map(c => c.key === key ? { ...c, value } : c));
+    setLocalConfigs(prev => prev.map(c => c.key === key ? { ...c, value } : c));
   };
 
   const handleSave = async (key: string) => {
-    const config = configs.find(c => c.key === key);
+    const config = localConfigs.find(c => c.key === key);
     setMessage('');
     setError('');
     
-    try {
-      await api.put(`/admin/configs/${key}`, { 
+    updateMutation.mutate({ 
+      key, 
+      data: { 
         value: config.value,
         description: config.description 
-      });
-      setMessage(`Configuration "${key}" updated successfully!`);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setError(`Failed to update configuration "${key}".`);
-    }
+      } 
+    }, {
+      onSuccess: () => {
+        setMessage(`Configuration "${key}" updated successfully!`);
+        setTimeout(() => setMessage(''), 3000);
+      },
+      onError: (err: any) => {
+        setError(err.message || `Failed to update configuration "${key}".`);
+      }
+    });
   };
 
   const categories = {
@@ -61,7 +59,14 @@ const ConfigEditor: React.FC = () => {
     other: { label: 'Other Settings', icon: CheckCircle2, color: '#64748b' }
   };
 
-  if (isLoading) return <div style={{ padding: '2rem' }}>Loading Configs...</div>;
+  if (status === 'pending' && localConfigs.length === 0) {
+    return (
+      <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid #ccc', borderTopColor: 'var(--primary)', borderRadius: '50%' }} />
+        Loading Configs...
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
@@ -70,7 +75,7 @@ const ConfigEditor: React.FC = () => {
           <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-primary)' }}>App Configuration</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Manage your AI model, app versioning, and pricing settings.</p>
         </div>
-        <Button variant="secondary" onClick={fetchConfigs} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Button variant="secondary" onClick={() => refetch()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <RotateCcw size={16} /> Refresh
         </Button>
       </div>
@@ -81,14 +86,14 @@ const ConfigEditor: React.FC = () => {
         </div>
       )}
 
-      {error && (
+      {(error || updateMutation.isError) && (
         <div style={{ padding: '1rem', background: '#fef2f2', color: '#b91c1c', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <AlertCircle size={20} /> {error}
+          <AlertCircle size={20} /> {error || (updateMutation.error as any)?.message}
         </div>
       )}
 
       {Object.entries(categories).map(([catKey, catInfo]) => {
-        const catConfigs = configs.filter(c => c.category === catKey);
+        const catConfigs = localConfigs.filter(c => c.category === catKey);
         if (catConfigs.length === 0) return null;
 
         return (
@@ -106,8 +111,13 @@ const ConfigEditor: React.FC = () => {
                       <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{config.key}</h4>
                       <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{config.description}</p>
                     </div>
-                    <Button onClick={() => handleSave(config.key)} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Save size={14} /> Save
+                    <Button 
+                      onClick={() => handleSave(config.key)} 
+                      size="sm" 
+                      disabled={updateMutation.isPending}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      <Save size={14} /> {updateMutation.isPending ? 'Saving...' : 'Save'}
                     </Button>
                   </div>
 

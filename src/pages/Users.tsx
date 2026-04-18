@@ -1,26 +1,16 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { 
   Users as UsersIcon, 
   Search, 
   Calendar, 
-  Filter, 
   ChevronDown,
   Mail,
-  User,
   Clock,
   MoreVertical,
-  ArrowRight
 } from 'lucide-react';
-import { getAppUsers } from '../services/adminService';
+import { useUsers } from '../hooks/useUsers';
 
 const Users: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  
   // Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -35,62 +25,42 @@ const Users: React.FC = () => {
     
     return () => clearTimeout(timer);
   }, [search]);
-  
+
+  // Use TanStack Query Hook
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status,
+    error,
+  } = useUsers({
+    search: debouncedSearch,
+    startDate,
+    endDate,
+  });
+
+  // Flatten users from all pages
+  const users = useMemo(() => {
+    return data?.pages.flatMap(page => page.data.users) || [];
+  }, [data]);
+
+  const totalCount = data?.pages[0]?.data.totalCount || 0;
+
+  // Infinite Scroll Observer
   const observer = useRef<IntersectionObserver | null>(null);
-  const lastUserElementRef = useCallback((node: any) => {
-    if (isLoading || isFetchingMore) return;
+  const lastUserElementRef = useCallback((node: HTMLTableRowElement) => {
+    if (status === 'pending' || isFetchingNextPage) return;
     if (observer.current) observer.current.disconnect();
     
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prevPage => prevPage + 1);
+      if (entries[0].isIntersecting && hasNextPage) {
+        fetchNextPage();
       }
     });
     
     if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore]);
-
-  const fetchUsers = async (pageNum: number, isNewSearch = false) => {
-    try {
-      if (pageNum === 1) setIsLoading(true);
-      else setIsFetchingMore(true);
-
-      const params = {
-        page: pageNum,
-        limit: 20,
-        search: debouncedSearch,
-        startDate,
-        endDate
-      };
-
-      const response = await getAppUsers(params);
-      
-      if (isNewSearch) {
-        setUsers(response.data.users);
-      } else {
-        setUsers(prev => [...prev, ...response.data.users]);
-      }
-      
-      setHasMore(response.data.hasMore);
-      setTotalCount(response.data.totalCount);
-    } catch (err) {
-      console.error('Failed to fetch users', err);
-    } finally {
-      setIsLoading(false);
-      setIsFetchingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    setPage(1);
-    fetchUsers(1, true);
-  }, [debouncedSearch, startDate, endDate]);
-
-  useEffect(() => {
-    if (page > 1) {
-      fetchUsers(page);
-    }
-  }, [page]);
+  }, [status, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -99,6 +69,10 @@ const Users: React.FC = () => {
       day: 'numeric'
     });
   };
+
+  if (status === 'error') {
+    return <div style={{ padding: '2rem', color: 'var(--error)' }}>Error fetching users: {(error as any)?.message}</div>;
+  }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -297,7 +271,7 @@ const Users: React.FC = () => {
           </tbody>
         </table>
 
-        {(isLoading || isFetchingMore) && (
+        {(status === 'pending' || isFetchingNextPage) && (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <div style={{ 
               width: '40px', 
@@ -312,7 +286,7 @@ const Users: React.FC = () => {
           </div>
         )}
 
-        {!isLoading && users.length === 0 && (
+        {status === 'success' && users.length === 0 && (
           <div style={{ padding: '5rem 2rem', textAlign: 'center' }}>
             <div style={{ 
               width: '80px', 
@@ -332,7 +306,7 @@ const Users: React.FC = () => {
           </div>
         )}
 
-        {!hasMore && users.length > 0 && (
+        {!hasNextPage && users.length > 0 && (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', borderTop: '1px solid var(--border)' }}>
             You've reached the end of the list.
           </div>

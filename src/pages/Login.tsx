@@ -1,34 +1,31 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
 import { Button } from '../components/ui/Button';
 import { Lock, Mail, ShieldCheck } from 'lucide-react';
+import { useLogin } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
+  
+  const loginMutation = useLogin();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
 
-    try {
-      const response = await api.post('/admin/login', { email, password });
-      if (response.data.success) {
-        localStorage.setItem('admin_token', response.data.data.accessToken);
-        localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
-        navigate('/dashboard');
+    loginMutation.mutate({ email, password }, {
+      onSuccess: (response) => {
+        if (response.success) {
+          localStorage.setItem('admin_token', response.data.accessToken);
+          localStorage.setItem('admin_user', JSON.stringify(response.data.user));
+          navigate('/dashboard');
+        }
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
+
+  const error = (loginMutation.error as any)?.message;
 
   return (
     <div style={{ 
@@ -117,7 +114,7 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          <Button type="submit" isLoading={isLoading} style={{ width: '100%' }}>
+          <Button type="submit" isLoading={loginMutation.isPending} style={{ width: '100%' }}>
             Sign In
           </Button>
         </form>

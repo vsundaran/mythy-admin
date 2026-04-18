@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import React from 'react';
 import { 
   MessageSquare, 
   ExternalLink, 
@@ -7,26 +6,29 @@ import {
   Hash,
   User as UserIcon
 } from 'lucide-react';
+import { useChats } from '../hooks/useChats';
 
 const Chats: React.FC = () => {
-  const [chats, setChats] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: response, status, error } = useChats();
 
-  useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const response = await api.get('/admin/chats');
-        setChats(response.data.data.chats);
-      } catch (err) {
-        console.error('Failed to fetch chats', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchChats();
-  }, []);
+  if (status === 'pending') {
+    return (
+      <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid #ccc', borderTopColor: 'var(--primary)', borderRadius: '50%' }} />
+        Loading Chats...
+      </div>
+    );
+  }
 
-  if (isLoading) return <div style={{ padding: '2rem' }}>Loading Chats...</div>;
+  if (status === 'error') {
+    return (
+      <div style={{ padding: '2rem', color: 'var(--error)' }}>
+        Error loading chats: {(error as any)?.message}
+      </div>
+    );
+  }
+
+  const chats = response?.data?.chats || [];
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -36,7 +38,7 @@ const Chats: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gap: '1rem' }}>
-        {chats.map(chat => (
+        {chats.map((chat: any) => (
           <div key={chat._id} className="glass" style={{ 
             padding: '1.25rem', 
             borderRadius: 'var(--radius-md)',

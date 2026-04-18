@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import React from 'react';
 import { 
   Users, 
   MessageSquare, 
@@ -19,6 +18,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { useStats } from '../hooks/useStats';
 
 const StatCard = ({ title, value, icon: Icon, trend, color }: any) => (
   <div className="glass" style={{
@@ -63,24 +63,26 @@ const StatCard = ({ title, value, icon: Icon, trend, color }: any) => (
 );
 
 const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: response, status, error } = useStats();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get('/admin/stats');
-        setStats(response.data.data);
-      } catch (err) {
-        console.error('Failed to fetch stats', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
+  if (status === 'pending') {
+    return (
+      <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid #ccc', borderTopColor: 'var(--primary)', borderRadius: '50%' }} />
+        Loading Dashboard...
+      </div>
+    );
+  }
 
-  if (isLoading) return <div style={{ padding: '2rem' }}>Loading Dashboard...</div>;
+  if (status === 'error') {
+    return (
+      <div style={{ padding: '2rem', color: 'var(--error)' }}>
+        Error loading dashboard: {(error as any)?.message}
+      </div>
+    );
+  }
+
+  const stats = response?.data;
 
   return (
     <div style={{ padding: '2rem' }}>
