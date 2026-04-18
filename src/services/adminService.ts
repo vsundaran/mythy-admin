@@ -89,3 +89,39 @@ export const updateAppConfig = async (key: string, data: any): Promise<ConfigRes
   const response = await api.put(`/admin/configs/${key}`, data);
   return response.data;
 };
+
+// --- Subscription Plans ---
+
+export interface SubscriptionPlan {
+  _id: string;
+  planId: string;
+  title: string;
+  priceDisplay: string;
+  numericPrice: number;
+  credits: number;
+  description: string;
+  saveTag?: string;
+  isRecommended: boolean;
+  durationInMonths: number;
+  isActive: boolean;
+}
+
+export const getSubscriptionPlans = async (): Promise<{ success: boolean; data: SubscriptionPlan[] }> => {
+  const response = await api.get('/admin/subscription-plans');
+  return response.data;
+};
+
+export const createSubscriptionPlan = async (data: Partial<SubscriptionPlan>): Promise<{ success: boolean; data: SubscriptionPlan }> => {
+  const response = await api.post('/admin/subscription-plans', data);
+  return response.data;
+};
+
+export const updateSubscriptionPlan = async (id: string, data: Partial<SubscriptionPlan>): Promise<{ success: boolean; data: SubscriptionPlan }> => {
+  const response = await api.put(`/admin/subscription-plans/${id}`, data);
+  return response.data;
+};
+
+export const deleteSubscriptionPlan = async (id: string): Promise<{ success: boolean }> => {
+  const response = await api.delete(`/admin/subscription-plans/${id}`);
+  return response.data;
+};

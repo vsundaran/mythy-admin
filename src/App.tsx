@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import ConfigEditor from './pages/ConfigEditor';
 import Chats from './pages/Chats';
 import Users from './pages/Users';
+import SubscriptionPlans from './pages/SubscriptionPlans';
 import './index.css';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -87,6 +88,17 @@ function App() {
             <ProtectedRoute>
               <MainLayout>
                 <Chats />
+              </MainLayout>
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/subscription-plans" 
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <SubscriptionPlans />
               </MainLayout>
             </ProtectedRoute>
           } 

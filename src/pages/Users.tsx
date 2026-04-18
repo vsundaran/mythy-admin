@@ -217,7 +217,13 @@ const Users: React.FC = () => {
                           color: 'white', 
                           padding: '2px', 
                           borderRadius: '50%',
-                          border: '2px solid white'
+                          border: '2px solid white',
+                          width:"24px",
+                          height:"24px",
+                          display:"flex",
+                          justifyContent:"center",
+                          alignItems:'center'
+
                         }}>
                           <ChevronDown size={10} style={{ transform: 'rotate(180deg)' }} />
                         </div>

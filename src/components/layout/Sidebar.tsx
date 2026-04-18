@@ -7,7 +7,8 @@ import {
   MessageSquare, 
   LogOut, 
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  CreditCard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,10 +18,18 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ user }) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Import api inside or at the top
+      const { default: api } = await import('../../services/api');
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    } finally {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+      navigate('/login');
+    }
   };
 
   const navItems = [
@@ -28,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
     { name: 'App Config', path: '/configs', icon: Settings },
     { name: 'Users', path: '/users', icon: Users },
     { name: 'Chats', path: '/chats', icon: MessageSquare },
+    { name: 'Subscription Plans', path: '/subscription-plans', icon: CreditCard },
   ];
 
   return (
