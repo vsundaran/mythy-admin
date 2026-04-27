@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://asp-mythy-api-prod-uaen.azurewebsites.net/api/v1';
 
 // Create axial instance
 const api = axios.create({
